@@ -1,0 +1,396 @@
+// use prisma-8
+
+model User {
+  id Int @id @default(autoincrement())
+
+  email String? @unique
+  firstName String
+  lastName String
+  phone String
+  location String
+
+  memberships Membership[]
+
+  ownedCompanies Company[] @relation("CompanyOwner")
+
+  ownedProjects Project[] @relation("ProjectOwner")
+
+  createdTasks Task[] @relation("TaskCreator")
+
+  assignedTasks TaskAssignment[]
+
+  assignedSubtasks SubtaskAssignment[]
+
+  reports Report[]
+
+  createdTransactions Transaction[] @relation("TransactionCreator")
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+model Company {
+  id Int @id @default(autoincrement())
+
+  name String
+  country String
+  rccm String
+
+  email String? @unique
+
+  owner User @relation("CompanyOwner", fields: [ownerId], references: [id])
+  ownerId Int
+
+  memberships Membership[]
+
+  projects Project[]
+
+  teams Team[]
+
+  transactions Transaction[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@index([ownerId])
+}
+
+
+model Membership {
+  id Int @id @default(autoincrement())
+
+  user User @relation(fields: [userId], references: [id])
+  userId Int
+
+  company Company @relation(fields: [companyId], references: [id])
+  companyId Int
+
+  role Role @relation(fields: [roleId], references: [id])
+  roleId Int
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+  @@index([roleId])
+}
+
+
+model Role {
+  id Int @id @default(autoincrement())
+
+  name String @unique
+
+  permissions RolePermission[]
+
+  memberships Membership[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+model Permission {
+  id Int @id @default(autoincrement())
+
+  name String @unique
+
+  roles RolePermission[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
+
+model RolePermission {
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  roleId Int
+
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  permissionId Int
+
+  createdAt TimestamptzString @default(now())
+
+  @@id([roleId, permissionId])
+}
+
+
+model Project {
+  id Int @id @default(autoincrement())
+
+  name String
+  description String?
+
+  startDate DateTime
+  endDate DateTime?
+
+  estimatedBudget Int
+  currentAmountSpent Int @default(0)
+
+  authorizationNumber String?
+
+  status ProjectStatus @default(NEW)
+
+  owner User @relation("ProjectOwner", fields: [ownerId], references: [id])
+  ownerId Int
+
+  company Company @relation(fields: [companyId], references: [id])
+  companyId Int
+
+  teams Team[]
+
+  tasks Task[]
+
+  transactions Transaction[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@index([companyId])
+  @@index([ownerId])
+  @@index([status])
+}
+
+
+model Team {
+  id Int @id @default(autoincrement())
+
+  name String
+
+  company Company @relation(fields: [companyId], references: [id])
+  companyId Int
+
+  project Project? @relation(fields: [projectId], references: [id])
+  projectId Int?
+
+  members TeamMember[]
+
+  tasks Task[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@index([companyId])
+  @@index([projectId])
+}
+
+
+model TeamMember {
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  createdAt TimestamptzString @default(now())
+
+  @@id([teamId, userId])
+}
+
+
+model Task {
+  id Int @id @default(autoincrement())
+
+  name String
+
+  description String?
+
+  estimatedBudget Int
+  currentAmountSpent Int @default(0)
+
+  startDate DateTime
+  endDate DateTime?
+
+  status ProjectStatus @default(NEW)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId Int
+
+  team Team? @relation(fields: [teamId], references: [id])
+  teamId Int?
+
+  creator User @relation("TaskCreator", fields: [creatorId], references: [id])
+  creatorId Int
+
+  assignments TaskAssignment[]
+
+  subtasks Subtask[]
+
+  transactions Transaction[]
+
+  reports Report[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@index([projectId])
+  @@index([teamId])
+  @@index([creatorId])
+  @@index([status])
+}
+
+
+model TaskAssignment {
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  assignedAt TimestamptzString @default(now())
+
+  @@id([taskId, userId])
+}
+
+
+model Subtask {
+  id Int @id @default(autoincrement())
+
+  name String
+
+  description String?
+
+  estimatedBudget Int
+  currentAmountSpent Int @default(0)
+
+  startDate DateTime
+  endDate DateTime?
+
+  status ProjectStatus @default(NEW)
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId Int
+
+  assignments SubtaskAssignment[]
+
+  reports Report[]
+
+  transactions Transaction[]
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@index([taskId])
+  @@index([status])
+}
+
+
+model SubtaskAssignment {
+  subtask Subtask @relation(fields: [subtaskId], references: [id], onDelete: Cascade)
+  subtaskId Int
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId Int
+
+  assignedAt TimestamptzString @default(now())
+
+  @@id([subtaskId, userId])
+}
+
+
+model Report {
+  id Int @id @default(autoincrement())
+
+  reportNumber String @unique
+
+  type ReportType
+
+  description String
+
+  file String?
+
+  reporter User @relation(fields: [reporterId], references: [id])
+  reporterId Int
+
+  task Task? @relation(fields: [taskId], references: [id])
+  taskId Int?
+
+  subtask Subtask? @relation(fields: [subtaskId], references: [id])
+  subtaskId Int?
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@index([reporterId])
+  @@index([taskId])
+  @@index([subtaskId])
+  @@index([type])
+}
+
+
+model Transaction {
+  id Int @id @default(autoincrement())
+
+  amount Int
+
+  type TransactionType
+
+  expenseType ExpenseType?
+  incomeType IncomeType?
+
+  description String?
+
+  company Company @relation(fields: [companyId], references: [id])
+  companyId Int
+
+  project Project? @relation(fields: [projectId], references: [id])
+  projectId Int?
+
+  task Task? @relation(fields: [taskId], references: [id])
+  taskId Int?
+
+  subtask Subtask? @relation(fields: [subtaskId], references: [id])
+  subtaskId Int?
+
+  createdBy User @relation("TransactionCreator", fields: [createdById], references: [id])
+  createdById Int
+
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+
+  @@index([companyId])
+  @@index([projectId])
+  @@index([taskId])
+  @@index([subtaskId])
+  @@index([createdById])
+  @@index([type])
+}
+
+
+enum ProjectStatus {
+  NEW
+  STARTED
+  IN_PROGRESS
+  LATE
+  ON_BREAK
+  COMPLETED
+  ABANDONED
+}
+
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+}
+
+
+enum ExpenseType {
+  SALARY
+  PURCHASE_OF_EQUIPMENT
+  RENTAL
+}
+
+
+enum IncomeType {
+  OWNER_DEPOSIT
+  SUPPLIER_RETURN
+}
+
+
+enum ReportType {
+  EXPENSE
+  INCOME
+  NOTE
+}
