@@ -6,16 +6,20 @@ model User {
   email String? @unique
   firstName String
   lastName String
-  phone String
-  location String
+  phone String @unique
+  location String?
+  password String
 
   memberships Membership[]
+  projectMember ProjectMember[]
 
   ownedCompanies Company[] @relation("CompanyOwner")
 
   ownedProjects Project[] @relation("ProjectOwner")
 
   createdTasks Task[] @relation("TaskCreator")
+  createdSubtasks Subtask[] @relation("SubtaskCreator")
+  
 
   assignedTasks TaskAssignment[]
 
@@ -56,6 +60,18 @@ model Company {
   @@index([ownerId])
 }
 
+model ProjectMember {
+  id Int @id @default(autoincrement())
+  user User @relation(fields: [userId], references: [id])
+  userId Int
+  project Project @relation(fields: [projectId], references: [id])
+  projectId Int
+  role Role @relation(fields: [roleId], references: [id])
+  roleId Int
+  createdAt TimestamptzString @default(now())
+  updatedAt temporal.updatedAtString()
+}
+
 
 model Membership {
   id Int @id @default(autoincrement())
@@ -81,40 +97,44 @@ model Membership {
 model Role {
   id Int @id @default(autoincrement())
 
-  name String @unique
+  name String 
 
-  permissions RolePermission[]
+  //permissions RolePermission[]
+
+  roleScope RoleScope
 
   memberships Membership[]
 
-  createdAt TimestamptzString @default(now())
-  updatedAt temporal.updatedAtString()
-}
-
-
-model Permission {
-  id Int @id @default(autoincrement())
-
-  name String @unique
-
-  roles RolePermission[]
+  projectMember ProjectMember[]
 
   createdAt TimestamptzString @default(now())
   updatedAt temporal.updatedAtString()
 }
 
 
-model RolePermission {
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
-  roleId Int
+//model Permission {
+ // id Int @id @default(autoincrement())
 
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
-  permissionId Int
+ // name String @unique
 
-  createdAt TimestamptzString @default(now())
+  //roles RolePermission[]
 
-  @@id([roleId, permissionId])
-}
+ // createdAt TimestamptzString @default(now())
+ // updatedAt temporal.updatedAtString()
+//}
+
+
+//model RolePermission {
+//  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+//  roleId Int
+
+//  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+//  permissionId Int
+
+//  createdAt TimestamptzString @default(now())
+
+//  @@id([roleId, permissionId])
+//}
 
 
 model Project {
@@ -131,13 +151,15 @@ model Project {
 
   authorizationNumber String?
 
+  projectMember ProjectMember[]
+
   status ProjectStatus @default(NEW)
 
   owner User @relation("ProjectOwner", fields: [ownerId], references: [id])
   ownerId Int
 
-  company Company @relation(fields: [companyId], references: [id])
-  companyId Int
+  company Company? @relation(fields: [companyId], references: [id])
+  companyId Int?
 
   teams Team[]
 
@@ -262,6 +284,9 @@ model Subtask {
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   taskId Int
+
+  creator User @relation("SubtaskCreator", fields: [creatorId], references: [id])
+  creatorId Int
 
   assignments SubtaskAssignment[]
 
@@ -393,4 +418,9 @@ enum ReportType {
   EXPENSE
   INCOME
   NOTE
+}
+
+enum RoleScope {
+  COMPANY
+  PROJECT
 }
